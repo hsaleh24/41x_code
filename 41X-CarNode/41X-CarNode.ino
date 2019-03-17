@@ -1,18 +1,57 @@
 #include <Arduino_FreeRTOS.h>
 
-int enablePin = 13;
-int IN1 = 12;
-int IN2 = 11;
+// Left Motor
+int EN_left = 13;
+int IN1_left = 12;
+int IN2_left = 11;
 
-int powerPin = 9;
-int trigPin = 8;
-int echoPin = 7;
-bool forceBreak = false;
+// Right Motor
+int EN_right = 13;
+int IN1_right = 12;
+int IN2_right = 11;
+
+
+// Distance Sensor - Front
+int trigPin_front = 35;
+int echoPin_front = 37;
+
+// Distance Sensor - Back
+int trigPin_back = 39;
+int echoPin_back = 41;
+
+// Distance Sensor - Left
+int trigPin_left = 43;
+int echoPin_left = 45;
+
+// Distance Sensor - Right
+int trigPin_right = 47;
+int echoPin_right = 49;
+
+
+// Multi-tasking variables and methods
+bool forwardBreak = false;
+bool reverseBreak = false;
+bool leftBreak = false;
+bool rightBreak = false;
+
 bool isDriver = false;
 bool onStop = false;
 
-void TaskDrive(void *pvParameters);
-void TaskBrake(void *pvParameters);
+void TaskDrive(void *pvParameters); // communication task - 1
+void TaskBrake(void *pvParameters); // collision avoidance task - 2
+
+/* To do:
+ *  1. Re-divide tasks so that there is:
+ *        a)Serial Comm task (updates a global of the last command)
+ *        b)Collision avoidance task (monitors all distance sensors)
+ *        c)Core task (main)
+ *  2. Make left, right NOT binary (range of turning possible based on angle of sleeve accelerometer)
+ *  3. Make front, reverse speed NOT binary
+ *  
+ * Fun things:
+ *  1. Allow WALL-E to walk with you :) (i.e. accelerometer needs to recognize that the limb (i.e. arm/leg) is moving too and allows WALL-E to walk with it. Would req localization...)
+ *  2. 
+*/
 
 void setup() {
   //setup pins for motor control
@@ -58,7 +97,7 @@ void TaskDrive(void *pvParameters) {
         isDriver = true;
         //Serial.println("Stop");
       }
-      else if ((transmittedMsg == 'F') && (!forceBreak)) { //Forward
+      else if ((transmittedMsg == 'F') && (!forwardBreak)) { //Forward
         digitalWrite(enablePin, HIGH);
         digitalWrite(IN1, LOW);
         digitalWrite(IN2, HIGH);
@@ -67,7 +106,24 @@ void TaskDrive(void *pvParameters) {
         isDriver=false;
         //Serial.println("Forward");
       }
-      else if (transmittedMsg == 'R') { //Reverse
+      else if (transmittedMsg == 'B') && (!reverseBreak)) { //Back
+        digitalWrite(enablePin, HIGH);
+        digitalWrite(IN1, HIGH);
+        digitalWrite(IN2, LOW);
+        onStop = false;
+        isDriver=true;
+        //Serial.println("Reverse");
+      }
+      else if ((transmittedMsg == 'L') && (!leftBreak)) { //Left
+        digitalWrite(enablePin, HIGH);
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, HIGH);
+        //analogWrite(IN2, 200);
+        onStop = false;
+        isDriver=false;
+        //Serial.println("Forward");
+      }
+      else if (transmittedMsg == 'R') && (!rightBreak)) { //Right
         digitalWrite(enablePin, HIGH);
         digitalWrite(IN1, HIGH);
         digitalWrite(IN2, LOW);
