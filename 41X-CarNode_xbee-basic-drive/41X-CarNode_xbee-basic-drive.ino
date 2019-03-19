@@ -70,33 +70,45 @@ void setup() {
 }
 
 void loop() {
-  // forward 5 sec
-  motor_left.setSpeed(255);
-  motor_left.run(FORWARD);
-  motor_right.setSpeed(255);
-  motor_right.run(FORWARD);
-  delay(5000);
-  
-  // stop 1 sec
-//  motor_left.setSpeed(0);
-  motor_left.run(BRAKE);
-//  motor_right.setSpeed(0);
-  motor_right.run(BRAKE);
-  delay(2000);
-  
-  // reverse 5 sec
-  motor_left.setSpeed(255);
-  motor_left.run(BACKWARD);
-  motor_right.setSpeed(255);
-  motor_right.run(BACKWARD);
-  delay(5000);
-  
-  // stop 1 sec
-//  motor_left.setSpeed(0);
-  motor_left.run(BRAKE);
-//  motor_right.setSpeed(0);
-  motor_right.run(BRAKE);
-  delay(2000);
+  if (Serial.available() > 0) {
+    char transmittedMsg = (char)Serial.read();
+    
+    if (transmittedMsg == 'S') { //Stop
+      motor_left.setSpeed(0);
+      motor_left.run(BRAKE);
+      motor_right.setSpeed(0);
+      motor_right.run(BRAKE);
+      Serial.println("Stop");
+    }
+    else if (transmittedMsg == 'F') { //Forward
+      motor_left.setSpeed(255);
+      motor_left.run(FORWARD);
+      motor_right.setSpeed(255);
+      motor_right.run(FORWARD);
+      Serial.println("Forward");
+    }
+    else if (transmittedMsg == 'B') { //Backwards
+      motor_left.setSpeed(255);
+      motor_left.run(BACKWARD);
+      motor_right.setSpeed(255);
+      motor_right.run(BACKWARD);
+      Serial.println("Reverse");
+    }
+    else if (transmittedMsg == 'L') { //Left
+      motor_left.setSpeed(0);
+      motor_left.run(BRAKE);
+      motor_right.setSpeed(255);
+      motor_right.run(FORWARD);
+      Serial.println("Forward");
+    }
+    else if (transmittedMsg == 'R') { //Right
+      motor_left.setSpeed(255);
+      motor_left.run(FORWARD);
+      motor_right.setSpeed(0);
+      motor_right.run(BRAKE);
+      Serial.println("Reverse");
+    }
+  }
   
   // Everything done in tasks
 }
