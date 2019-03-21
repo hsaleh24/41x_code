@@ -1,7 +1,12 @@
+#include <SoftwareSerial.h>
 char incoming = 'g';
+
+//SoftwareSerial Serial1;
+
 void setup() 
 {
     Serial.begin(9600);
+    Serial1.begin(9600);
 }
 
 void loop() 
@@ -9,11 +14,11 @@ void loop()
  
   
    
-   if(Serial.available() > 0)
+   if(Serial1.available() > 0)
    {
-       incoming = Serial.read();
+       incoming = Serial1.read();
        Serial.println(char(incoming));
-       
+
    }
    else 
    {

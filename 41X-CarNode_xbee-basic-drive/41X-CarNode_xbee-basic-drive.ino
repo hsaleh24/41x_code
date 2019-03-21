@@ -51,6 +51,7 @@ int echoPin_right = 49;
 
 void setup() {
   Serial.begin(9600);
+  Serial1.begin(9600);
 
 //  xTaskCreate(
 //    TaskDrive
@@ -70,8 +71,8 @@ void setup() {
 }
 
 void loop() {
-  if (Serial.available() > 0) {
-    char transmittedMsg = (char)Serial.read();
+  if (Serial1.available() > 0) {
+    char transmittedMsg = (char)Serial1.read();
     
     if (transmittedMsg == 'S') { //Stop
       motor_left.setSpeed(0);

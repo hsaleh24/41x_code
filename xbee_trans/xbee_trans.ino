@@ -8,10 +8,21 @@ void setup()
 void loop()
 {
 
-  Serial.println("Network established");
+ /*** Serial.println("Network established");
  // Serial.println(incoming);
   Serial.println("Finally");
-  delay(1000);
+  delay(1000); ***;/ **/
+
+
+  
+Serial.println("F");
+delay(5000);
+Serial.println("B");
+delay(5000);
+
+
+
+  
   /***
   if (Serial.available())
   {
