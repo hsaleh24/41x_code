@@ -1,15 +1,11 @@
 #include <Arduino_FreeRTOS.h>
+#include <AFMotor.h>
 
-// Left Motor
-int EN_left = 13;
-int IN1_left = 12;
-int IN2_left = 11;
+// Left Motor (A)
+AF_DCMotor motor_left(1);
 
-// Right Motor
-int EN_right = 13;
-int IN1_right = 12;
-int IN2_right = 11;
-
+// Right Motor (B)
+AF_DCMotor motor_right(2);
 
 // Distance Sensor - Front
 int trigPin_front = 35;
@@ -29,24 +25,28 @@ int echoPin_right = 49;
 
 
 // Multi-tasking variables and methods
-bool forwardBreak = false;
-bool reverseBreak = false;
-bool leftBreak = false;
-bool rightBreak = false;
+double vel = 0.0;
+double dir = 0.0;
 
-bool isDriver = false;
-bool onStop = false;
+bool forwardBrake = false;
+bool reverseBrake = false;
+bool leftBrake = false;
+bool rightBrake = false;
+//
+//bool isDriver = false;
+//bool onStop = false;
 
-void TaskDrive(void *pvParameters); // communication task - 1
-void TaskBrake(void *pvParameters); // collision avoidance task - 2
+void TaskSerialCom(void *pvParameters); // communication task - 1
+void TaskCollisionDetection(void *pvParameters); // collision avoidance task - 2
+void TaskMain(void *pvParameters); // main task - 3
 
 /* To do:
- *  1. Re-divide tasks so that there is:
+ *  1. Re-divide tasks so that there is: - DONE (NOT TESTED)
  *        a)Serial Comm task (updates a global of the last command)
  *        b)Collision avoidance task (monitors all distance sensors)
  *        c)Core task (main)
  *  2. Make left, right NOT binary (range of turning possible based on angle of sleeve accelerometer)
- *  3. Make front, reverse speed NOT binary
+ *  3. Make front, reverse speed NOT binary - DONE (NOT TESTED)
  *  
  * Fun things:
  *  1. Allow WALL-E to walk with you :) (i.e. accelerometer needs to recognize that the limb (i.e. arm/leg) is moving too and allows WALL-E to walk with it. Would req localization...)
@@ -54,30 +54,30 @@ void TaskBrake(void *pvParameters); // collision avoidance task - 2
 */
 
 void setup() {
-  //setup pins for motor control
-  pinMode(enablePin, OUTPUT);
-  digitalWrite(enablePin, LOW);
-  pinMode(IN1, OUTPUT);
-  digitalWrite(IN1, LOW);
-  pinMode(IN2, OUTPUT);
-  digitalWrite(IN2, LOW);
-
   Serial.begin(9600);
 
   xTaskCreate(
-    TaskDrive
-    , (const portCHAR *)"Driver"
+    TaskSerialCom
+    , (const portCHAR *)"XBeeSerialCom"
     , 128 // Stack Size
     , NULL
     , 1 // priority
     , NULL );
     
   xTaskCreate(
-    TaskBrake
-    , (const portCHAR *)"Brakes"
+    TaskCollisionDetection
+    , (const portCHAR *)"CollisionAvoidance"
     , 128 // Stack Size
     , NULL
     , 2 // priority
+    , NULL );
+
+  xTaskCreate(
+    TaskMain
+    , (const portCHAR *)"Main"
+    , 128 // Stack Size
+    , NULL
+    , 3 // priority
     , NULL );
 }
 
@@ -85,104 +85,139 @@ void loop() {
   // Everything done in tasks
 }
 
-void TaskDrive(void *pvParameters) {  
-  //loop
-  while(1){
-    if (Serial.available() > 0){
-      char transmittedMsg = (char)Serial.read();
-      Serial.println(transmittedMsg);
-      if (transmittedMsg == 'S') { //Stop
-        digitalWrite(enablePin, LOW);
-        onStop = true;
-        isDriver = true;
-        //Serial.println("Stop");
-      }
-      else if ((transmittedMsg == 'F') && (!forwardBreak)) { //Forward
-        digitalWrite(enablePin, HIGH);
-        digitalWrite(IN1, LOW);
-        digitalWrite(IN2, HIGH);
-        //analogWrite(IN2, 200);
-        onStop = false;
-        isDriver=false;
-        //Serial.println("Forward");
-      }
-      else if (transmittedMsg == 'B') && (!reverseBreak)) { //Back
-        digitalWrite(enablePin, HIGH);
-        digitalWrite(IN1, HIGH);
-        digitalWrite(IN2, LOW);
-        onStop = false;
-        isDriver=true;
-        //Serial.println("Reverse");
-      }
-      else if ((transmittedMsg == 'L') && (!leftBreak)) { //Left
-        digitalWrite(enablePin, HIGH);
-        digitalWrite(IN1, LOW);
-        digitalWrite(IN2, HIGH);
-        //analogWrite(IN2, 200);
-        onStop = false;
-        isDriver=false;
-        //Serial.println("Forward");
-      }
-      else if (transmittedMsg == 'R') && (!rightBreak)) { //Right
-        digitalWrite(enablePin, HIGH);
-        digitalWrite(IN1, HIGH);
-        digitalWrite(IN2, LOW);
-        onStop = false;
-        isDriver=true;
-        //Serial.println("Reverse");
-      }
-    }
-    vTaskDelay(50/portTICK_PERIOD_MS); //100ms delay
-    
-    //Serial.flush();
-    Serial.end();
-    Serial.begin(9600);
-    vTaskDelay(20/portTICK_PERIOD_MS);
-  }
-}
+void TaskMain(void *pvParameters) {
+  // drive robot
+  while(1) {
+    // 1 - calc PWM signal based on accelerometer data
+    int speedFactor = 255*vel/90;
+    if (speedFactor > 255) // saturation
+      speedFactor = 255;
+    else if (speedFactor < 0)
+      speedFactor = 0;
 
-void TaskBrake(void *pvParameters) {
-  //setup pins for distance sensor
-  pinMode(powerPin, OUTPUT);
-  digitalWrite(powerPin, HIGH);
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-  
-  //loop
-  while(1){
-    int distance = getDistance();
-    //if (!isDriver) {
-      if ((distance < 250) && (distance > 200)){
-        forceBreak = true;
-        //Serial.println("writing to motors - SLOW");
+    /*update below
+    * 1. Calibration values
+    * 2. Make direction a range
+    */
+    // 2 - write motors
+    if ( ((dir > 315 && dir <= 360)||(dir >= 0 && dir <= 45)) && (!forwardBrake) ){ //Forward
+      motor_left.setSpeed(speedFactor);
+      motor_left.run(FORWARD);
+      motor_right.setSpeed(speedFactor);
+      motor_right.run(FORWARD);
+      Serial.println("Debug - FORWARD");
+    }
+    else if ( (dir > 45 && dir <= 135) && (!rightBrake) ){ //Right
+      motor_left.setSpeed(speedFactor);
+      motor_left.run(FORWARD);
+      motor_right.setSpeed(0);
+      motor_right.run(BRAKE);
+      Serial.println("Debug - RIGHT");
+    }
+    else if ( (dir > 135 && dir <= 225) && (!reverseBrake) ){ //Backwards
+      motor_left.setSpeed(speedFactor);
+      motor_left.run(BACKWARD);
+      motor_right.setSpeed(speedFactor);
+      motor_right.run(BACKWARD);
+      Serial.println("Debug - REVERSE");
+    }
+    else if ( (dir > 225 && dir <= 315) && (!leftBrake) ){ //Left
+      motor_left.setSpeed(0);
+      motor_left.run(BRAKE);
+      motor_right.setSpeed(speedFactor);
+      motor_right.run(FORWARD);
+      Serial.println("Debug - LEFT");
+    }
+
+    // 3 - collision brake
+    if (forwardBrake || reverseBrake || leftBrake || rightBrake) {
+      motor_left.setSpeed(0);
+      motor_left.run(BRAKE);
+      motor_right.setSpeed(0);
+      motor_right.run(BRAKE);
+    }
         
-        //slow motor code (if it is not already stopped)
-        if ((!onStop) && (!isDriver)) {
-          digitalWrite(enablePin, HIGH);
-          digitalWrite(IN1, LOW);
-          int speedFactor = 255-5*(250-distance);
-          //int speedFactor = 0;
-          analogWrite(IN2, speedFactor);
-        }
-      }
-      else if (distance <= 200) {
-        forceBreak = true;
-        //Serial.println("writing to motors - FORCE BREAK");
-        if (!isDriver) {
-          digitalWrite(enablePin, LOW); // stop motor
-        }
-      }
-      else {
-        //Serial.println("not writing to motors - task distance");
-        forceBreak = false;
-      }
-    //}
-    //Serial.println(distance);
     vTaskDelay(20/portTICK_PERIOD_MS); //20ms
   }
 }
 
-int getDistance(int trigPin, int echoPin) {
+void TaskSerialCom(void *pvParameters) {
+  // setup serial port
+  Serial1.begin(9600);
+  
+  // monitor serial port (and update global flags)
+  while(1) {
+    if (Serial1.available() > 0)
+    {
+      vel = GetTransmittedMessage(",").toDouble();
+      dir = GetTransmittedMessage("*").toDouble();
+    }
+    vTaskDelay(20/portTICK_PERIOD_MS); //20ms
+  }
+}
+
+void TaskCollisionDetection(void *pvParameters) {  
+  // setup distance sensors
+  SetupDistanceSensors();
+
+  // monitor distance sensors
+  while(1) {
+    int trigPin = trigPin_front;
+    int echoPin = echoPin_front;
+    
+    for (int i=0; i<4; i++) {
+      // 1 - get sensor reading
+      int distance = GetDistance(trigPin, echoPin);
+
+      // 2 - decide to brake based on sensor reading
+      bool brake = false;
+      if (distance <= 200) // FORCE BRAKE
+        brake = true;
+
+      // 3 - update flag
+      switch (trigPin){
+        case 35: // front
+          forwardBrake = brake;
+          break;
+        case 39: // back
+          reverseBrake = brake;
+          break;
+        case 43: // left
+          leftBrake = brake;
+          break;
+        case 47: // right
+          rightBrake = brake;
+          break;
+      }
+
+      // 4 - update pin values
+      trigPin += 4;
+      echoPin += 4;
+    }
+    
+    vTaskDelay(20/portTICK_PERIOD_MS); //20ms
+  }
+}
+
+void SetupDistanceSensors() {
+  // Front Distance Sensor
+  pinMode(trigPin_front, OUTPUT);
+  pinMode(echoPin_front, INPUT);
+
+  // Back Distance Sensor
+  pinMode(trigPin_back, OUTPUT);
+  pinMode(echoPin_back, INPUT);
+
+  // Left Distance Sensor
+  pinMode(trigPin_left, OUTPUT);
+  pinMode(echoPin_left, INPUT);
+
+  // Right Distance Sensor
+  pinMode(trigPin_right, OUTPUT);
+  pinMode(echoPin_right, INPUT);
+}
+
+int GetDistance(int trigPin, int echoPin) {
   int distance = 0;
   long time_us;
   
@@ -202,4 +237,21 @@ int getDistance(int trigPin, int echoPin) {
   distance = time_us/58;
 
   return distance;
+}
+
+String GetTransmittedMessage(String endChar) // POST: returns string WITHOUT the end char
+{
+  String transmittedMsg = "";
+  
+  while (!transmittedMsg.endsWith(endChar))
+  {
+    if (Serial1.available() > 0)
+    {
+      transmittedMsg += (char)Serial1.read();
+    }
+  }
+  transmittedMsg[transmittedMsg.length() - 1] = '\0'; // remove the end char (replace with null)
+  transmittedMsg.trim(); // removing any possible trailing white space (e.g. '\n')
+  
+  return transmittedMsg;
 }

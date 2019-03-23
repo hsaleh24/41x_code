@@ -71,45 +71,54 @@ void setup() {
 }
 
 void loop() {
-  if (Serial1.available() > 0) {
-    char transmittedMsg = (char)Serial1.read();
-    
-    if (transmittedMsg == 'S') { //Stop
-      motor_left.setSpeed(0);
-      motor_left.run(BRAKE);
-      motor_right.setSpeed(0);
-      motor_right.run(BRAKE);
-      Serial.println("Stop");
-    }
-    else if (transmittedMsg == 'F') { //Forward
-      motor_left.setSpeed(255);
-      motor_left.run(FORWARD);
-      motor_right.setSpeed(255);
-      motor_right.run(FORWARD);
-      Serial.println("Forward");
-    }
-    else if (transmittedMsg == 'B') { //Backwards
-      motor_left.setSpeed(255);
-      motor_left.run(BACKWARD);
-      motor_right.setSpeed(255);
-      motor_right.run(BACKWARD);
-      Serial.println("Reverse");
-    }
-    else if (transmittedMsg == 'L') { //Left
-      motor_left.setSpeed(0);
-      motor_left.run(BRAKE);
-      motor_right.setSpeed(255);
-      motor_right.run(FORWARD);
-      Serial.println("Forward");
-    }
-    else if (transmittedMsg == 'R') { //Right
-      motor_left.setSpeed(255);
-      motor_left.run(FORWARD);
-      motor_right.setSpeed(0);
-      motor_right.run(BRAKE);
-      Serial.println("Reverse");
-    }
-  }
+  // 1 - Get and parse the message
+  double vel = GetTransmittedMessage(",").toDouble();
+  double dir = GetTransmittedMessage("*").toDouble();
+
+  // 2 - drive motors
+  Serial.println("Velocity: " + vel);
+  Serial.println("Direction: " + dir + "\n");
+  
+//  if (Serial1.available() > 0) {
+//    char transmittedMsg = (char)Serial1.read();
+//
+//    Serial.println();
+//    if (transmittedMsg == 'S') { //Stop
+//      motor_left.setSpeed(0);
+//      motor_left.run(BRAKE);
+//      motor_right.setSpeed(0);
+//      motor_right.run(BRAKE);
+//      Serial.println("Stop");
+//    }
+//    else if (transmittedMsg == 'F') { //Forward
+//      motor_left.setSpeed(255);
+//      motor_left.run(FORWARD);
+//      motor_right.setSpeed(255);
+//      motor_right.run(FORWARD);
+//      Serial.println("Forward");
+//    }
+//    else if (transmittedMsg == 'B') { //Backwards
+//      motor_left.setSpeed(255);
+//      motor_left.run(BACKWARD);
+//      motor_right.setSpeed(255);
+//      motor_right.run(BACKWARD);
+//      Serial.println("Reverse");
+//    }
+//    else if (transmittedMsg == 'L') { //Left
+//      motor_left.setSpeed(0);
+//      motor_left.run(BRAKE);
+//      motor_right.setSpeed(255);
+//      motor_right.run(FORWARD);
+//      Serial.println("Forward");
+//    }
+//    else if (transmittedMsg == 'R') { //Right
+//      motor_left.setSpeed(255);
+//      motor_left.run(FORWARD);
+//      motor_right.setSpeed(0);
+//      motor_right.run(BRAKE);
+//      Serial.println("Reverse");
+//    }
+//  }
   
   // Everything done in tasks
 }
@@ -231,4 +240,21 @@ int getDistance(int trigPin, int echoPin) {
   distance = time_us/58;
 
   return distance;
+}
+
+String GetTransmittedMessage(String endChar) // POST: returns string WITHOUT the end char
+{
+  String transmittedMsg = "";
+  
+  while (!transmittedMsg.endsWith(endChar))
+  {
+    if (Serial1.available() > 0)
+    {
+      transmittedMsg += (char)Serial1.read();
+    }
+  }
+  transmittedMsg[transmittedMsg.length() - 1] = '\0'; // remove the end char (replace with null)
+  transmittedMsg.trim(); // removing any possible trailing white space (e.g. '\n')
+  
+  return transmittedMsg;
 }
