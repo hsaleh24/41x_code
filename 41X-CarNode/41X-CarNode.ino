@@ -61,7 +61,7 @@ void setup() {
     , (const portCHAR *)"XBeeSerialCom"
     , 128 // Stack Size
     , NULL
-    , 1 // priority
+    , 3 // priority
     , NULL );
     
   xTaskCreate(
@@ -77,7 +77,7 @@ void setup() {
     , (const portCHAR *)"Main"
     , 128 // Stack Size
     , NULL
-    , 3 // priority
+    , 1 // priority
     , NULL );
 }
 
@@ -99,6 +99,10 @@ void TaskMain(void *pvParameters) {
     * 1. Calibration values
     * 2. Make direction a range
     */
+//    Serial.println(dir);
+//    Serial.println(vel);
+//    Serial.println(speedFactor);
+    
     // 2 - write motors
     if ( ((dir > 315 && dir <= 360)||(dir >= 0 && dir <= 45)) && (!forwardBrake) ){ //Forward
       motor_left.setSpeed(speedFactor);
@@ -151,50 +155,54 @@ void TaskSerialCom(void *pvParameters) {
     {
       vel = GetTransmittedMessage(",").toDouble();
       dir = GetTransmittedMessage("*").toDouble();
+
+      Serial.println(dir);
+      Serial.println(vel);
     }
+    Serial.println("DEBUG - XBee Task");
     vTaskDelay(20/portTICK_PERIOD_MS); //20ms
   }
 }
 
 void TaskCollisionDetection(void *pvParameters) {  
   // setup distance sensors
-  SetupDistanceSensors();
+//  SetupDistanceSensors();
 
   // monitor distance sensors
   while(1) {
-    int trigPin = trigPin_front;
-    int echoPin = echoPin_front;
-    
-    for (int i=0; i<4; i++) {
-      // 1 - get sensor reading
-      int distance = GetDistance(trigPin, echoPin);
-
-      // 2 - decide to brake based on sensor reading
-      bool brake = false;
-      if (distance <= 200) // FORCE BRAKE
-        brake = true;
-
-      // 3 - update flag
-      switch (trigPin){
-        case 35: // front
-          forwardBrake = brake;
-          break;
-        case 39: // back
-          reverseBrake = brake;
-          break;
-        case 43: // left
-          leftBrake = brake;
-          break;
-        case 47: // right
-          rightBrake = brake;
-          break;
-      }
-
-      // 4 - update pin values
-      trigPin += 4;
-      echoPin += 4;
-    }
-    
+//    int trigPin = trigPin_front;
+//    int echoPin = echoPin_front;
+//    
+//    for (int i=0; i<4; i++) {
+//      // 1 - get sensor reading
+//      int distance = GetDistance(trigPin, echoPin);
+//
+//      // 2 - decide to brake based on sensor reading
+//      bool brake = false;
+//      if (distance <= 200) // FORCE BRAKE
+//        brake = true;
+//
+//      // 3 - update flag
+//      switch (trigPin){
+//        case 35: // front
+//          forwardBrake = brake;
+//          break;
+//        case 39: // back
+//          reverseBrake = brake;
+//          break;
+//        case 43: // left
+//          leftBrake = brake;
+//          break;
+//        case 47: // right
+//          rightBrake = brake;
+//          break;
+//      }
+//
+//      // 4 - update pin values
+//      trigPin += 4;
+//      echoPin += 4;
+//    }
+    Serial.println("DEBUG - Distance Task");
     vTaskDelay(20/portTICK_PERIOD_MS); //20ms
   }
 }
@@ -218,6 +226,8 @@ void SetupDistanceSensors() {
 }
 
 int GetDistance(int trigPin, int echoPin) {
+  Serial.println("DEBUG - GetDistance");
+  
   int distance = 0;
   long time_us;
   
@@ -241,13 +251,19 @@ int GetDistance(int trigPin, int echoPin) {
 
 String GetTransmittedMessage(String endChar) // POST: returns string WITHOUT the end char
 {
+  Serial.println("DEBUG - GetTransmittedMessage");
+
   String transmittedMsg = "";
   
   while (!transmittedMsg.endsWith(endChar))
   {
+//    Serial.println("debug - Stuck here question mark ???");
+    
     if (Serial1.available() > 0)
     {
       transmittedMsg += (char)Serial1.read();
+      Serial.println("debug - ever get here ?");
+      Serial.println(transmittedMsg);
     }
   }
   transmittedMsg[transmittedMsg.length() - 1] = '\0'; // remove the end char (replace with null)
