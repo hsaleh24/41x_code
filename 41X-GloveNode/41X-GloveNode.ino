@@ -19,7 +19,7 @@ void loop() {
   Serial.println(data);
 //  Serial.println("F"); // for data collection
   
-  delay(300); //prevents overwhelming the serial port
+  delay(100); //prevents overwhelming the serial port
 }
 
 double calcRoll(){ //rotation angle about x-axis
