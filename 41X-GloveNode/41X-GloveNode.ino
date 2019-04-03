@@ -9,16 +9,23 @@ void setup() {
   Serial.begin(9600);
 }
 
+/* everything only works for values of up to x=45 */
 void loop() {
   // 1 - get accelerometer data
-  double theta_x = calcRoll();
-  double theta_y = calcPitch();
+  double theta_x = 0.0;
+  double theta_y = 0.0;
+  for (int i =0; i<100; i++) {
+    theta_x += calcRoll();
+    theta_y += calcPitch();
+  }
+  theta_x = theta_x/100.0;
+  theta_y = theta_y/100.0;
 
   // 2 - write to serial port for wireless com
   String data = (String)theta_x + "," + (String)theta_y + "*";
   Serial.println(data);
   
-  delay(50); //prevents overwhelming the serial port
+  delay(10); //prevents overwhelming the serial port
 }
 
 double calcRoll(){ //rotation angle about x-axis
@@ -32,6 +39,10 @@ double calcRoll(){ //rotation angle about x-axis
 //Serial.println(acc_z);
 
   double roll = acc_y*100.0;
+
+  double pitchTemp = calcPitch();
+  if (pitchTemp > 91 && pitchTemp < 269) // reverse
+    acc_z = -1*acc_z;
   
   // below conditioning just for WALL-E robot :)
   if (roll < 0)
@@ -46,11 +57,11 @@ double calcPitch(){ //rotation angle about y-axis
   double acc_x = myAccGyro.readFloatAccelX();
   double acc_z = myAccGyro.readFloatAccelZ();
 
-  double pitch = acc_x*90.0;
+  double pitch = abs(acc_x*90.0);
   if (acc_z < 0 && acc_x < 0) // quadrant 1
     pitch = abs(pitch);
   else if (acc_z >= 0 && acc_x < 0) // quadrant 2
-    pitch = 180 + pitch;
+    pitch = 180 - pitch;
   else if (acc_z >= 0 && acc_x >= 0) // quadrant 3
     pitch = 180 + pitch;
   else if (acc_z < 0 && acc_x >= 0) // quadrant 4

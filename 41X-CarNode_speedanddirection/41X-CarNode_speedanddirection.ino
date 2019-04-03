@@ -97,7 +97,10 @@ void TurnMotor(AF_DCMotor turn_motor)
 
 double GetMaxSpeed(double vel)
 {
-  return (vel/(MAX_SPEED_ANGLE - MIN_SPEED_ANGLE))*255.0; // maps angle range to appropriate PWM speed
+  if (vel < 45)
+    return 0.0;
+  else
+    return (vel/(MAX_SPEED_ANGLE - MIN_SPEED_ANGLE))*255.0; // maps angle range to appropriate PWM speed
 }
 
 double GetMotorTurnSpeed(double dir)
