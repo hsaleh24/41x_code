@@ -39,6 +39,10 @@ void loop() {
     // 1 - get command
     double vel = GetTransmittedMessage(",").toDouble();
     double dir = GetTransmittedMessage("*").toDouble();
+    if (dir < 90)
+      dir = 90.0;
+    else if (dir > 180)
+      dir = 180.0;
 //    double offset = 0.0;
 
     // 2 - Get motor speeds
@@ -46,7 +50,7 @@ void loop() {
     TURN_SPEED = GetMotorTurnSpeed(dir);
 
     // 3 - drive motors
-    int quadrant = GetQuadrant();
+    int quadrant = GetQuadrant(dir);
     switch (quadrant)
     {
       case 0:
@@ -99,11 +103,11 @@ double GetMaxSpeed(double vel)
 double GetMotorTurnSpeed(double dir)
 {
   // get the quadrant
-  int quadrant = GetQuadrant();
+  int quadrant = GetQuadrant(dir);
 
   // get sign
   int sign = 1;
-  if (quadant == 2 || quadrant == 3)
+  if (quadrant == 2 || quadrant == 3)
     sign = -1; 
 
   // get secondary motor speed factor (pivot wheel in the turn)
@@ -113,11 +117,11 @@ double GetMotorTurnSpeed(double dir)
   return speedFactor;
 }
 
-int GetQuadrant()
+int GetQuadrant(double dir)
 {
   int quadrant = 0;
   if (dir >= 90)
-    quadrant = (dir - (dir % 90))/90; // returns 1, 2, or 3
+    quadrant = ((int)dir - ((int)dir % 90))/90; // returns 1, 2, or 3
   return quadrant;
 }
 

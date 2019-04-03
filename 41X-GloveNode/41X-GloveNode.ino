@@ -11,54 +11,50 @@ void setup() {
 
 void loop() {
   // 1 - get accelerometer data
-  double x_angle = calcRoll();
-  double y_angle = calcPitch();
+  double theta_x = calcRoll();
+  double theta_y = calcPitch();
 
   // 2 - write to serial port for wireless com
-  String data = (String)x_angle + "," + (String)y_angle + "*";
+  String data = (String)theta_x + "," + (String)theta_y + "*";
   Serial.println(data);
-//  Serial.println("F"); // for data collection
   
-  delay(100); //prevents overwhelming the serial port
+  delay(50); //prevents overwhelming the serial port
 }
 
 double calcRoll(){ //rotation angle about x-axis
+  double acc_x = myAccGyro.readFloatAccelX();
   double acc_y = myAccGyro.readFloatAccelY();
   double acc_z = myAccGyro.readFloatAccelZ();
 
-//  Serial.println("ACC_Y: " + (String)acc_y);
-//  Serial.println("ACC_Z: " + (String)acc_z);
+  // debugging
+//  Serial.println(acc_y); // for roll (rot x)
+//  Serial.println(acc_x); // for pitch (rot y)
+//Serial.println(acc_z);
 
-  double roll = atan2(acc_y, acc_z)*57.3;
-  if (acc_y < 0) // account for other quadrants
-    roll += 360;
-
-//  if (acc_z < 0) // quadrant 2 or 3
-//    roll = 180 + roll;
-//  else if (acc_y < 0 && acc_z > 0) // quadrant 4
-//    roll = 360 + roll;
+  double roll = acc_y*100.0;
+  
+  // below conditioning just for WALL-E robot :)
+  if (roll < 0)
+    roll = 0.0;
+  else if (roll > 90 || acc_z > 0)
+    roll = 90.0;
   
   return roll;
 }
 
 double calcPitch(){ //rotation angle about y-axis
   double acc_x = myAccGyro.readFloatAccelX();
-  double acc_y = myAccGyro.readFloatAccelY();
   double acc_z = myAccGyro.readFloatAccelZ();
 
-//  Serial.println("ACC_X: " + (String)acc_x);
-//  Serial.println("ACC_Y: " + (String)acc_y);
-//  Serial.println("ACC_Z: " + (String)acc_z);
+  double pitch = acc_x*90.0;
+  if (acc_z < 0 && acc_x < 0) // quadrant 1
+    pitch = abs(pitch);
+  else if (acc_z >= 0 && acc_x < 0) // quadrant 2
+    pitch = 180 + pitch;
+  else if (acc_z >= 0 && acc_x >= 0) // quadrant 3
+    pitch = 180 + pitch;
+  else if (acc_z < 0 && acc_x >= 0) // quadrant 4
+    pitch = 360 - pitch;
 
-  double pitch = atan2((-acc_x), sqrt(acc_y*acc_y + acc_z*acc_z)) * 57.3;
-
-  // account for other quadrants
-  if (acc_x < 0 && acc_z > 0)
-    pitch = 180 - pitch;
-  else if (acc_x > 0 && acc_z > 0)
-    pitch = 180 - pitch;
-  else if (acc_x > 0 && acc_z < 0)
-    pitch += 360;
-  
   return pitch;
 }
