@@ -14,12 +14,12 @@ void loop() {
   // 1 - get accelerometer data
   double theta_x = 0.0;
   double theta_y = 0.0;
-  for (int i =0; i<100; i++) {
+  for (int i =0; i<20; i++) {
     theta_x += calcRoll();
     theta_y += calcPitch();
   }
-  theta_x = theta_x/100.0;
-  theta_y = theta_y/100.0;
+  theta_x = theta_x/20.0;
+  theta_y = theta_y/20.0;
 
   // 2 - write to serial port for wireless com
   String data = (String)theta_x + "," + (String)theta_y + "*";

@@ -1,4 +1,4 @@
- #include <SPI.h>
+#include <SPI.h>
 #include <Wire.h>
 #include <SparkFunLSM6DS3.h>
 #include <AFMotor.h>
@@ -39,15 +39,24 @@ void loop() {
     // 1 - get command
     double vel = GetTransmittedMessage(",").toDouble();
     double dir = GetTransmittedMessage("*").toDouble();
-    if (dir < 90)
-      dir = 90.0;
-    else if (dir > 180)
-      dir = 180.0;
-//    double offset = 0.0;
 
+    // debugging - echo serial comm data (check)
+    Serial.print(vel);
+    Serial.print(",");
+    Serial.println(dir);
+    
+//    if (dir < 90)
+//      dir = 90.0;
+//    else if (dir > 180)
+//      dir = 180.0;
+//    double offset = 0.0;
+    
+    
     // 2 - Get motor speeds
     MAX_SPEED = GetMaxSpeed(vel);
+//    Serial.println(MAX_SPEED); // debugging
     TURN_SPEED = GetMotorTurnSpeed(dir);
+    Serial.println(TURN_SPEED);
 
     // 3 - drive motors
     int quadrant = GetQuadrant(dir);
@@ -78,12 +87,12 @@ void loop() {
     }
     
     // 4 - accelerometer data (data logging)
-    double actualAngle = calcPitch();
-    Serial.print(startHome);
-    Serial.print(" ");
-    Serial.println(actualAngle);
+//    double actualAngle = calcPitch();
+//    Serial.print(startHome);
+//    Serial.print(" ");
+//    Serial.println(actualAngle);
   }
-  delay(100);
+  delay(50);
 }
 
 void TurnMotor(AF_DCMotor turn_motor)
@@ -97,10 +106,10 @@ void TurnMotor(AF_DCMotor turn_motor)
 
 double GetMaxSpeed(double vel)
 {
-  if (vel < 45)
+  if (vel > 45)
     return 0.0;
   else
-    return (vel/(MAX_SPEED_ANGLE - MIN_SPEED_ANGLE))*255.0; // maps angle range to appropriate PWM speed
+    return ((90.0-vel)/(MAX_SPEED_ANGLE - MIN_SPEED_ANGLE))*255.0; // maps angle range to appropriate PWM speed
 }
 
 double GetMotorTurnSpeed(double dir)
@@ -125,6 +134,10 @@ int GetQuadrant(double dir)
   int quadrant = 0;
   if (dir >= 90)
     quadrant = ((int)dir - ((int)dir % 90))/90; // returns 1, 2, or 3
+
+  Serial.print("quadrant: "); // debugging
+  Serial.println(quadrant); // debugging
+  
   return quadrant;
 }
 
