@@ -22,71 +22,82 @@ const double MAX_SPEED_ANGLE = 90.0; // accelerometer data
 const double MIN_SPEED_ANGLE = 0.0;  // accelerometer data
 double TURN_SPEED = 255.0; // pwm variable
 
+
+// Distance Sensor - Front
+int trigPin_front = 35;
+int echoPin_front = 37;
+
+// Distance Sensor - Back
+int trigPin_back = 39;
+int echoPin_back = 41;
+
+// Distance Sensor - Left
+int trigPin_left = 43;
+int echoPin_left = 45;
+
+// Distance Sensor - Right
+int trigPin_right = 47;
+int echoPin_right = 49;
+
+
 void setup() {
   // setup accelerometer
   myAccGyro.begin();
   Serial.begin(9600);
-
-  // setup XBee Com
-  Serial1.begin(9600);
 
   // home - what is "straight"
   startHome = calcPitch();
 }
 
 void loop() {
-  if (Serial1.available() > 0) {
-    // 1 - get command
-    double vel = GetTransmittedMessage(",").toDouble();
-    double dir = GetTransmittedMessage("*").toDouble();
+  // 1 - get command
+  double vel = 0.01; // max speed
+  double dir = 0.01;
 
-    // debugging - echo serial comm data (check)
-//    Serial.print(vel);
-//    Serial.print(",");
-    Serial.print(dir);
-//    Serial.println();
-    
-    // 2 - Get motor speeds
-    MAX_SPEED = GetMaxSpeed(vel);
-//    Serial.println(MAX_SPEED); // debugging
-    TURN_SPEED = GetMotorTurnSpeed(dir);
-    Serial.println(TURN_SPEED);
+  // 2 - Get motor speeds
+  MAX_SPEED = GetMaxSpeed(vel);
+  TURN_SPEED = GetMotorTurnSpeed(dir);
+//  Serial.println(TURN_SPEED);
 
-    // 3 - drive motors
-    int quadrant = GetQuadrant(dir);
-    switch (quadrant)
-    {
-      case 0:
-        motor_left.setSpeed(MAX_SPEED);
-        motor_left.run(FORWARD);
-        TurnMotor(motor_right);
-        break;
-      case 1:
-        motor_left.setSpeed(MAX_SPEED);
-        motor_left.run(BACKWARD);
-        TurnMotor(motor_right);
-        break;
-      case 2:
-        motor_right.setSpeed(MAX_SPEED);
-        motor_right.run(BACKWARD);
-        TurnMotor(motor_left);
-        break;
-      case 3:
-        motor_right.setSpeed(MAX_SPEED);
-        motor_right.run(FORWARD);
-        TurnMotor(motor_left);
-        break;
-      default:
-        break;
-    }
-    
-    // 4 - accelerometer data (data logging)
-//    double actualAngle = calcPitch();
-//    Serial.print(startHome);
-//    Serial.print(" ");
-//    Serial.println(actualAngle);
+  // 3 - drive motors
+  int quadrant = GetQuadrant(dir);
+  switch (quadrant)
+  {
+    case 0:
+      motor_left.setSpeed(MAX_SPEED);
+      motor_left.run(FORWARD);
+      TurnMotor(motor_right);
+      break;
+    case 1:
+      motor_left.setSpeed(MAX_SPEED);
+      motor_left.run(BACKWARD);
+      TurnMotor(motor_right);
+      break;
+    case 2:
+      motor_right.setSpeed(MAX_SPEED);
+      motor_right.run(BACKWARD);
+      TurnMotor(motor_left);
+      break;
+    case 3:
+      motor_right.setSpeed(MAX_SPEED);
+      motor_right.run(FORWARD);
+      TurnMotor(motor_left);
+      break;
+    default:
+      break;
   }
-  delay(50);
+  
+  // 4 - accelerometer data (data logging)
+  Serial.print(dir);
+  Serial.print(" ");
+  double actualAngle = calcPitch();
+//  if (startHome <= 180)
+//    actualAngle = actualAngle
+//  Serial.print(startHome);
+//  Serial.print(" ");
+  Serial.println(actualAngle);
+
+  delay(500);
 }
 
 void TurnMotor(AF_DCMotor turn_motor)
